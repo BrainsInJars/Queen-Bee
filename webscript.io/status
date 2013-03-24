@@ -1,0 +1,58 @@
+local twilio = require 'twilio'
+
+local AUTH_TOKEN = 'TWILIO AUTH TOKEN'
+
+if not twilio.verify(request, AUTH_TOKEN) then
+	return 403
+end
+
+function idiv(a, b)
+	local q = a / b
+	return (q > 0) and math.floor(q) or math.ceil(q)
+end
+
+function elapsed_time(seconds)
+	local minutes = idiv(seconds, 60)
+	seconds = seconds % 60
+
+	local hours = idiv(minutes, 60)
+	minutes = minutes % 60
+
+	return hours..'h'..minutes..'m'..seconds..'s'
+end
+
+local twiml = '<?xml version="1.0" encoding="UTF-8"?><Response>'
+
+if request.form.SmsSid then
+	local system_failure = tonumber(storage.system_failure)
+	local flame_failure = tonumber(storage.flame_failure)
+
+	local system_down = os.difftime(os.time(), system_failure)
+	local flame_down = os.difftime(os.time(), flame_failure)
+
+	twiml = twiml .. '<Sms to="'..request.form.From..'" from="'..request.form.To..'">'
+	twiml = twiml .. 'Flame: '..((flame_failure == 0) and 'OK' or 'Failure ('..elapsed_time(flame_down)..')')..'\n'
+	twiml = twiml .. 'System: '..((system_failure == 0) and 'OK' or 'Failure ('..elapsed_time(system_down)..')')..'\n'
+	twiml = twiml .. '</Sms>'
+else
+	local monitor = tonumber(storage.system_failure) == 1
+	local flame = tonumber(storage.flame_failure) == 1
+
+	twiml = twiml .. '<Say voice="woman">'
+
+	if monitor and flame then
+		twiml = twiml .. 'There is something wrong with the flame and the monitoring system is down'
+	elseif monitor then
+		twiml = twiml .. 'The monitoring system is currently down.' 
+	elseif flame then
+		twiml = twiml .. 'There is something wrong with the furnace flame.'
+	else
+		twiml = twiml .. 'The furnace is OK.'
+	end
+	
+	twiml = twiml .. '</Say>'
+end
+
+twiml = twiml..'</Response>'
+
+return twiml, {['Content-Type']='application/xml'}
