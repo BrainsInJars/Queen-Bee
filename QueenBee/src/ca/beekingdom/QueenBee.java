@@ -35,7 +35,6 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.SyncBasicHttpParams;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import com.pi4j.io.gpio.GpioFactory;
