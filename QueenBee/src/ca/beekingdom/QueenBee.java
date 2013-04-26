@@ -35,10 +35,14 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.SyncBasicHttpParams;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 import com.pi4j.io.gpio.GpioFactory;
 
 public class QueenBee implements Observer {
+	private static final Logger log = Logger.getLogger(QueenBee.class);
+
 	private static final String HTTP_USER_AGENT = "http.user_agent";
 	private static final String HTTP_FROM = "http.from";
 
@@ -47,7 +51,9 @@ public class QueenBee implements Observer {
 	private static final String COSM_FEED_ID = "cosm.feed_id";
 	
 	private static final String COSM_UPDATE_INTERVAL = "cosm.update_interval";
-	
+
+	private static final String LOG_LEVEL = "log.level";
+
 	private static final ContentType TEXT_CSV = ContentType.create("text/csv", "UTF8");
 
 	private static SchemeRegistry schemeRegistry;
@@ -81,21 +87,25 @@ public class QueenBee implements Observer {
 	public static void main(String[] args) {
 		Properties userConfig = loadUserConfig("/etc/queenbee");
 
+		log.info("Service starting");
 		long cosmUpdateInterval = 10000;
 		try {
 			cosmUpdateInterval = Long.valueOf(userConfig.getProperty(COSM_UPDATE_INTERVAL));
 		}
 		catch(Exception ex) {
-			ex.printStackTrace(System.err);
+			log.warn("Unable to configure update interval", ex);
 		}
 		cosmUpdateInterval = Math.max(600, cosmUpdateInterval);
+		log.debug(String.format("COSM Update Interval: %dms", cosmUpdateInterval));
 
 		configureHttpClient(userConfig);
+		log.info("HTTP client configured");
 
 		IdleConnectionMonitor idleMonitor = new IdleConnectionMonitor(connManager);
 		ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 		executor.scheduleWithFixedDelay(idleMonitor, 60, 60, TimeUnit.SECONDS);
 
+		log.info("Starting GPIO");
 		QueenBee qb = new QueenBee(executor, userConfig);
 		GpioMonitor gpioMonitor = new GpioMonitor(GpioFactory.getInstance());
 
@@ -107,15 +117,18 @@ public class QueenBee implements Observer {
 			}
 		}
 		catch(InterruptedException ex) {
-			System.err.println("Queen Bee interrupted, shutting down");
+			log.info("Received shutdown command");
 		}
 
 		try {
 			if(!executor.awaitTermination(3, TimeUnit.SECONDS)) {
 				executor.shutdownNow();
+				log.warn("Forcing termination of pending tasks");
 			}
+			log.info("Service terminated");
 		} catch(InterruptedException ex) {
 			executor.shutdownNow();
+			log.warn("Shutdown interrupted");
 		}
 	}
 
@@ -124,7 +137,7 @@ public class QueenBee implements Observer {
 	}
 	private static Properties loadUserConfig(File src) {
 		Reader reader;
-		
+
 		try {
 			reader = new FileReader(src);
 		}
@@ -154,6 +167,8 @@ public class QueenBee implements Observer {
 		defaultConfig.setProperty(COSM_HOST, "api.cosm.com");
 		defaultConfig.setProperty(COSM_UPDATE_INTERVAL, "60000");
 
+		defaultConfig.setProperty(LOG_LEVEL, "INFO");
+
 		return defaultConfig;
 	}
 
@@ -182,7 +197,7 @@ public class QueenBee implements Observer {
 	public void update(Observable o, Object arg) {
 		Integer flameLevel = (Integer)arg;
 
-		System.out.println(flameLevel);
+		log.info(flameLevel);
 
 		HttpPut request = new HttpPut(cosmResource);
 		StringBuilder builder = new StringBuilder();
