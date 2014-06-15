@@ -31,7 +31,7 @@ class App(object):
 		self.log.info("Shutting down")
 
 	def _pin(self, pin, value):
-		self._set_pin(value) if value: else self._clear_pin(value)
+		self._set_pin(value) if value else self._clear_pin(value)
 
 	def _set_pin(self, pin):
 		self.status = (1 << pin) | self.status
@@ -46,7 +46,7 @@ class App(object):
 		GPIO.setmode(GPIO.BOARD)
 
 		# Configure input pins
-		for pin in [0, 1, 2]
+		for pin in [0, 1, 2]:
 			GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 			self._pin(pin, GPIO.input(pin))
