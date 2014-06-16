@@ -1,6 +1,7 @@
 import os
 import logging
 import threading
+import atexit
 
 import boto
 
@@ -21,6 +22,7 @@ class App(object):
 
 		self.status = 0
 		self.bounce_timeout = bounce_timeout
+		self.terminate = threading.Event()
 
 	def run(self):
 		self.log.info("Starting")
@@ -31,17 +33,29 @@ class App(object):
 		self.log.info("Shutting down")
 
 	def _pin(self, pin, value):
-		self._set_pin(value) if value else self._clear_pin(value)
+		previous = self.status
+		if value:
+			self.status = (1 << pin) | self.status
+		else:
+			self.status = ~(1 << pin) & self.status
+
+		if self.status == previous:
+			return
+
+		self.log.debug("State changed: %" % self.status)
 
 	def _set_pin(self, pin):
-		self.status = (1 << pin) | self.status
-		self.log.debug("Set pin: %d" % pin)
+		self._pin(pin, True)
 
 	def _clear_pin(self, pin):
-		self.status = ~(1 << pin) & self.status
-		self.log.debug("Cleared pin: %d" % pin)
+		self._pin(pin, False)
+
+	def _stop(self):
+		self.terminate.set()
 
 	def _run(self):
+		atexit.register(self._stop)
+
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BOARD)
 
@@ -57,3 +71,7 @@ class App(object):
 		# Set the relay output
 		GPIO.setup(3, GPIO.OUT)
 		GPIO.output(3, False)
+
+		# TODO post heartbeat
+		while !self.terminate.wait(10.0):
+			pass
