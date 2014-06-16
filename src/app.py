@@ -75,3 +75,5 @@ class App(object):
 		# TODO post heartbeat
 		while !self.terminate.wait(10.0):
 			pass
+
+		GPIO.cleanup()
