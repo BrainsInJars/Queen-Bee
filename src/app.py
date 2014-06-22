@@ -11,7 +11,7 @@ except ImportError:
 	GPIO = None
 
 class App(object):
-	def __init__(self, pid, pid_timeout = 5, bounce_timeout = 200):
+	def __init__(self, pid, pid_timeout=5, bounce_timeout=0):
 		self.log = logging.getLogger(self.__module__)
 
 		self.stdin_path = '/dev/null'
@@ -42,13 +42,10 @@ class App(object):
 		if self.status == previous:
 			return
 
-		self.log.debug("State changed: %" % self.status)
+		self.log.debug("State changed: 0x%02x" % self.status)
 
-	def _set_pin(self, pin):
-		self._pin(pin, True)
-
-	def _clear_pin(self, pin):
-		self._pin(pin, False)
+	def _change_pin(self, pin):
+		self._pin(GPIO.input(pin))
 
 	def _stop(self):
 		self.terminate.set()
@@ -57,23 +54,31 @@ class App(object):
 		atexit.register(self._stop)
 
 		GPIO.setwarnings(False)
-		GPIO.setmode(GPIO.BOARD)
+		GPIO.setmode(GPIO.BCM)
 
 		# Configure input pins
-		for pin in [0, 1, 2]:
-			GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+		for pin in [17, 18, 27]:
+			self.log.info("Configuring GPIO%02d" % (pin,))
 
-			self._pin(pin, GPIO.input(pin))
+			try:
+				GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-			GPIO.add_event_detect(pin, GPIO.RISING, bouncetime=self.bounce_timeout, callback=self._set_pin)
-			GPIO.add_event_detect(pin, GPIO.FALLING, bouncetime=self.bounce_timeout, callback=self._clear_pin)
+				self._pin(pin, GPIO.input(pin))
+
+				GPIO.add_event_detect(pin, GPIO.BOTH, bouncetime=self.bounce_timeout)
+				GPIO.add_event_callback(pin, self._change_pin)
+			except Exception as ex:
+				self.log.exception(ex)
+				self.log.info("Skipping GPIO%02d" % (pin,))
 
 		# Set the relay output
-		GPIO.setup(3, GPIO.OUT)
-		GPIO.output(3, False)
+		GPIO.setup(22, GPIO.OUT)
+		GPIO.output(22, True)
 
 		# TODO post heartbeat
-		while !self.terminate.wait(10.0):
-			pass
+		while not self.terminate.wait(1.0):
+			for pin in [17, 18, 27]:
+				self._pin(pin, GPIO.input(pin))
+			self.log.info("Heartbeat")
 
 		GPIO.cleanup()

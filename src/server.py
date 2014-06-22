@@ -20,6 +20,7 @@ formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 handler = logging.handlers.TimedRotatingFileHandler(log_file, when='midnight')
 handler.setFormatter(formatter)
 log.addHandler(handler)
+log.setLevel(logging.DEBUG)
 
 try:
 	runner = daemon.runner.DaemonRunner(app.App("queenbee.pid"))
