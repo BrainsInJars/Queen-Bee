@@ -2,14 +2,6 @@
 	"use strict";
 
 	function refresh_events() {
-		var states = {
-			0: 'Off',
-			1: 'Ok',
-			2: 'Low Flame',
-			4: 'High Flame',
-			7: 'Off'
-		};
-
 		QueenBee.events.list({limit: 20}).done(function(data) {
 			var table = $('#events-table tbody').empty();
 
@@ -18,7 +10,8 @@
 
 				var row = $('<tr>')
 					.append($('<td>').text(occured.toLocaleString()))
-					.append($('<td>').text(states[evt['value']]))
+					.append($('<td>').text(evt['type']))
+					.append($('<td>').text(evt['value']))
 				;
 				table.append(row);
 			});
