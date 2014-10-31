@@ -9,6 +9,11 @@ _PIN_HIGH = 27
 _PIN_RELIGHT = 22
 _PIN_OUTPUT = 23
 
+AUTO = 0x1
+LOW = 0x2
+HIGH = 0x4
+OFF = 0x7
+
 class VeriFlame(threading.Thread, object):
 	def __init__(self, bouncetime=300):
 		super(VeriFlame, self).__init__()
