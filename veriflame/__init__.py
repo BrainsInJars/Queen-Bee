@@ -91,7 +91,10 @@ class VeriFlame(threading.Thread, object):
 				self._state = current
 
 				if self.callback:
-					self.callback(self._state)
+					try:
+						self.callback(self._state)
+					except Exception as ex:
+						self.log.exception(ex)
 
 		self.GPIO.cleanup()
 
