@@ -61,6 +61,8 @@ class EventsHandler(BaseHandler):
 		if where:
 			query = query + ' WHERE ' + ' '.join(where)
 
+		query = query + ' ORDER BY occured DESC'
+
 		if limit:
 			query = query + ' LIMIT ?'
 			params.append(int(limit))
