@@ -2,9 +2,8 @@ import os
 import logging
 import threading
 import atexit
-import json
+import time
 import sqlite3
-import urllib
 
 import veriflame
 import queenbee
@@ -69,7 +68,7 @@ class App(object):
 	def _run(self):
 		atexit.register(self._stop)
 
-		# TODO: Configure the veriflame callback
+		self.veriflame.callback = self._state_callback
 		self.veriflame.start()
 		ioloop.IOLoop.current().start()
 
@@ -95,8 +94,16 @@ class App(object):
 	def _webscript_down(self):
 		pass
 
+	def _state_callback(self, state):
+		if self.state == state:
+			return
+
+		self.state = state
+		db = sqlite3.connect(database)
+		with db:
+			db.execute("INSERT INTO events(occured, type, value) VALUES (?, ?, ?)", (int(1000 * time.time()), 'flame', state))
+
 	def _init_database(self, database):
-		self.log.info(database)
 		db = sqlite3.connect(database)
 		with db:
 			db.execute('''CREATE TABLE IF NOT EXISTS callees (
@@ -106,9 +113,17 @@ class App(object):
 			)''')
 
 			db.execute('''CREATE TABLE IF NOT EXISTS events (
-				id INT,
-				occured INT,
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				occured INTEGER,
 				type TEXT,
-				value INT,
-				PRIMARY KEY(id)
+				value INTEGER
 			)''')
+
+			cursor = db.cursor()
+			cursor.execute("SELECT value FROM events WHERE type='flame' ORDER BY occured DESC LIMIT 1");
+
+			self.state = cursor.fetchone()
+			if self.state is None:
+				self.state = veriflame.OFF
+
+				db.execute("INSERT INTO events(occured, type, value) VALUES (?, ?, ?)", (int(1000 * time.time()), 'flame', self.state))
