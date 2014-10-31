@@ -161,7 +161,7 @@ class App(object):
 		if self.state == state:
 			return
 
-		self._log_event('flame', self.state)
+		self._log_event('flame', state)
 		self.message = self._get_message(state)
 		if self.network == 0:
 			self.qb.message = self.message
