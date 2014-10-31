@@ -146,7 +146,7 @@ class App(object):
 			veriflame.LOW: 'The furnace flame is low',
 			veriflame.HIGH: 'The furnace flame is high',
 			veriflame.OFF: 'The furnace is off',
-		}.get('', 'The furnace is in an unknown state')
+		}.get(state, 'The furnace is in an unknown state')
 
 	def _get_callees(self):
 		with self.open_db() as db:
