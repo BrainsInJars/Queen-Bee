@@ -5,6 +5,7 @@ import atexit
 import time
 import sqlite3
 
+import api
 import veriflame
 import queenbee
 
@@ -48,6 +49,8 @@ class App(object):
 			(r'/js/(.*\.js)', web.StaticFileHandler, {'path': resources_dir('js')}),
 			(r'/css/(.*\.css)', web.StaticFileHandler, {'path': resources_dir('css')}),
 			(r'/images/(.*)', web.StaticFileHandler, {'path': resources_dir('images')}),
+
+			(r'/api/events/', api.EventsHandler, {'database': database}),
 		], debug = args.debug)
 
 		self.server = httpserver.HTTPServer(self.application)
@@ -127,3 +130,7 @@ class App(object):
 				self.state = veriflame.OFF
 
 				db.execute("INSERT INTO events(occured, type, value) VALUES (?, ?, ?)", (int(1000 * time.time()), 'flame', self.state))
+			else:
+				self.state = self.state[0]
+
+			self.log.info('Last recorded flame state: %d' % (self.state,))
