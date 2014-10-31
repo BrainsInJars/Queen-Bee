@@ -5,6 +5,8 @@ import atexit
 import time
 import sqlite3
 
+from operator import itemgetter
+
 import api
 import veriflame
 import queenbee
@@ -35,12 +37,17 @@ class App(object):
 		self.qb = queenbee.QueenBee(self.config.get('QueenBee', 'key'), self.config.get('QueenBee', 'secret'))
 		self.twilio = rest.TwilioRestClient(self.config.get('Twilio', 'key'), self.config.get('Twilio', 'secret'))
 
+		self.twilio_from = self.config.get('Twilio', 'from')
+
+		self.network = 0
+		self.notify_on_recovery = False
+
 		# Configure communication with the VeriFlame
 		bounce_timeout = self.config.getint('VeriFlame', 'bounce_timeout')
 		self.veriflame = veriflame.VeriFlame(bouncetime=bounce_timeout)
 
-		database = os.path.expanduser(self.config.get('DEFAULT', 'database'))
-		self._init_database(database)
+		self.database = os.path.expanduser(self.config.get('DEFAULT', 'database'))
+		self._init_database(self.database)
 
 		self.application = web.Application([
 			# Static content handlers
@@ -57,62 +64,138 @@ class App(object):
 		self.server.listen(args.port, address=args.interface)
 		self.log.info('Webserver listening on %s:%d' % (args.interface, args.port))
 
+	def open_db(self):
+		db = sqlite3.connect(self.database)
+		db.row_factory = api.dict_factory
+		return db
+
 	def run(self):
 		self.log.info("Starting")
+
+		atexit.register(self._stop)
+
 		try:
 			self._run()
 		except Exception as ex:
 			self.log.exception(ex)
+
 		self.log.info("Shutting down")
 
 	def _stop(self):
 		self.terminate.set()
 
 	def _run(self):
-		atexit.register(self._stop)
-
 		self.veriflame.callback = self._state_callback
 		self.veriflame.start()
-		ioloop.IOLoop.current().start()
 
-		# TODO post heartbeat
-		self.errors = 0
-		while not self.terminate.wait(60.0):
-			self._heartbeat()
+		loop = ioloop.IOLoop.instance()
+		loop_thread = threading.Thread(target=loop.start)
+		loop_thread.daemon = True
+		loop_thread.start()
 
-		ioloop.IOLoop.current().stop()
-		self.monitor.stop()
+		self._heartbeat()
+
+		loop.stop()
+		self.veriflame.stop()
 
 	def _heartbeat(self):
-		try:
-			self.qb.heartbeat()
-			self.errors = 0
-		except Exception as ex:
-			self.log.exception(ex)
+		errors = 0
+		while not self.terminate.wait(60.0):
+			try:
+				self.qb.heartbeat()
 
-		self.errors = self.errors + 1
-		if self.errors == 4:
-			self._webscript_down(self)
+				if self.network == 1:
+					self._sms(self._get_callees(), 'webscript.io is back up')
+					self._log_event('webscript', 1)
+				elif self.network == 2:
+					if self.notify_on_recovery:
+						self.qb.message = self._get_message(self.state)
+						self._call(self._get_callees())
+					self._log_event('network', 1)
 
-	def _webscript_down(self):
-		pass
+				self.network = 0
+				errors = 0
+			except Exception as ex:
+				self.log.exception(ex)
+
+			errors = errors + 1
+			if errors == 4:
+				self.network = 1
+
+				try:
+					self._sms(self._get_callees(), 'webscript.io is down')
+					self._log_event('webscript', 0)
+				except Exception as ex:
+					self.log.exception(ex)
+					self._log_event('network', 0)
+
+	def _sms(self, callees, message):
+		for callee in callees:
+			self.twilio.messages.create(to=callee, from_=self.twilio_from, body=message)
+
+	def _call(self, callees):
+		callback = self.qb.conference_url
+		for callee in callees:
+			self.twilio.calls.create(to=callee, from_=self.twilio_from, url=callback)
+
+	def _get_message(self, state):
+		return {
+			veriflame.AUTO: 'The furnace flame is OK',
+			veriflame.LOW: 'The furnace flame is low',
+			veriflame.HIGH: 'The furnace flame is high',
+			veriflame.OFF: 'The furnace is off',
+		}.get('', 'The furnace is in an unknown state')
+
+	def _get_callees(self):
+		with self.open_db() as db:
+			cursor = db.cursor()
+			cursor.execute("SELECT phone FROM callees WHERE oncall=1")
+			callees = map(itemgetter('phone'), cursor.fetchall())
+		return callees
+
+	def _log_event(self, eventtype, value):
+		with self.open_db() as db:
+			db.execute("INSERT INTO events(occured, type, value) VALUES (?, ?, ?)", (int(1000 * time.time()), eventtype, value))
 
 	def _state_callback(self, state):
 		if self.state == state:
 			return
 
+		self._log_event('flame', self.state)
+		self.message = self._get_message(state)
+		if self.network == 0:
+			self.qb.message = self.message
+
+		if self.state == veriflame.AUTO:
+			if state != veriflame.OFF:
+				# Attempt a relight
+				self._log_event('relight', 1)
+				self.veriflame.relight(2.0)
+				self._log_event('relight', 0)
+
+				if self.network == 1:
+					self._sms(self._get_callees(), self.message)
+				elif self.network == 2:
+					self.notify_on_recovery = True
+				else:
+					self._call(self._get_callees())
+
+		elif state == veriflame.AUTO:
+			self.notify_on_recovery = False
+			if self.state != veriflame.OFF:
+				if self.network == 0:
+					self._call(self._get_callees())
+				elif self.network == 1:
+					self._sms(self._get_callees(), self.message)
+
 		self.state = state
-		db = sqlite3.connect(database)
-		with db:
-			db.execute("INSERT INTO events(occured, type, value) VALUES (?, ?, ?)", (int(1000 * time.time()), 'flame', state))
 
 	def _init_database(self, database):
-		db = sqlite3.connect(database)
-		with db:
+		with self.open_db() as db:
 			db.execute('''CREATE TABLE IF NOT EXISTS callees (
-				phone TEXT,
+				phone TEXT PRIMARY KEY,
 				name TEXT,
-				PRIMARY KEY(phone)
+				oncall INTEGER
 			)''')
 
 			db.execute('''CREATE TABLE IF NOT EXISTS events (
@@ -131,6 +214,6 @@ class App(object):
 
 				db.execute("INSERT INTO events(occured, type, value) VALUES (?, ?, ?)", (int(1000 * time.time()), 'flame', self.state))
 			else:
-				self.state = self.state[0]
+				self.state = self.state['value']
 
 			self.log.info('Last recorded flame state: %d' % (self.state,))
