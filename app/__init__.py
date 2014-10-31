@@ -185,9 +185,7 @@ class App(object):
 		elif state == veriflame.AUTO:
 			self.notify_on_recovery = False
 			if self.state != veriflame.OFF:
-				if self.network == 0:
-					self._call(self._get_callees())
-				elif self.network == 1:
+				if self.network == 0 or self.network == 1:
 					self._sms(self._get_callees(), self.message)
 
 		self.state = state
