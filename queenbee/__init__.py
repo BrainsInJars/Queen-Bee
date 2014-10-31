@@ -19,6 +19,10 @@ class QueenBee(object):
 	def __signature(self, request):
 		return hmac.new(self.__api_secret, request, digestmod=hashlib.sha256).hexdigest().lower()
 
+	def __conference_url(self):
+		url = "https://queenbee.webscript.io/v2/twilio?conference=1"
+	conference_url = property(__conference_url)
+
 	def api_call(self, method, request, query={}, body=None):
 		if not request.startswith('/'):
 			request = '/' + request
@@ -43,8 +47,6 @@ class QueenBee(object):
 		}
 
 		request = httpclient.HTTPRequest(url, **request_params)
-		dir(request)
-
 		response = self.httpclient.fetch(request)
 
 		return response.body
@@ -59,8 +61,7 @@ class QueenBee(object):
 	callees = property(__get_callees, __set_callees)
 
 	def __get_message(self):
-		return self.api_call('GET', '/v2/status')
+		return self.api_call('GET', '/v2/message')
 	def __set_message(self, message):
-		return self.api_call('POST', '/v2/status', body={'message': message})
+		return self.api_call('POST', '/v2/message', body=message)
 	message = property(__get_message, __set_message)
-
