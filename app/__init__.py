@@ -135,6 +135,8 @@ class App(object):
 
 	def _call(self, callees):
 		callback = self.qb.conference_url
+
+		self.log.info('Outbound callback: %s' % callback)
 		for callee in callees:
 			self.twilio.calls.create(to=callee, from_=self.twilio_from, url=callback)
 
