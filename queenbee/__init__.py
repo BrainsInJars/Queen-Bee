@@ -20,7 +20,7 @@ class QueenBee(object):
 		return hmac.new(self.__api_secret, request, digestmod=hashlib.sha256).hexdigest().lower()
 
 	def __conference_url(self):
-		url = "https://queenbee.webscript.io/v2/twilio?conference=1"
+		return "https://queenbee.webscript.io/v2/twilio?conference=1"
 	conference_url = property(__conference_url)
 
 	def api_call(self, method, request, query={}, body=None):
