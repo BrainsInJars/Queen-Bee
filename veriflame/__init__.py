@@ -9,16 +9,11 @@ _PIN_HIGH = 27
 _PIN_RELIGHT = 22
 _PIN_OUTPUT = 23
 
-AUTO = 0x1
-LOW = 0x2
-HIGH = 0x4
-OFF = 0x7
-
 class VeriFlame(threading.Thread, object):
 	def __init__(self, bouncetime=300):
 		super(VeriFlame, self).__init__()
 
-		self.state = 0
+		self._state = 0
 		self.bouncetime = bouncetime
 		self.log = logging.getLogger('veriflame')
 
@@ -34,9 +29,9 @@ class VeriFlame(threading.Thread, object):
 		except ImportError:
 			self.GPIO = None
 
-	# Fwr the current veriflame state
+	# Read the current veriflame state
 	def state(self):
-		return self.state
+		return self._state
 
 	# Control miscellaneous output pin
 	def output(self, state):
@@ -50,11 +45,16 @@ class VeriFlame(threading.Thread, object):
 		if self.GPIO is None:
 			return
 
-		self.log.info("Starting relight")
 		self.GPIO.output(_PIN_RELIGHT, True)
 		time.sleep(holdtime)
 		self.GPIO.output(_PIN_RELIGHT, False)
-		self.log.info("Finished relight")
+
+	def _read_state(self, pins):
+		state = 0
+		for index, pin in enumerate(pins):
+			if self.GPIO.input(pin) == self.GPIO.HIGH:
+				state = state | (1 << index)
+		return state
 
 	def run(self):
 		if self.GPIO is None:
@@ -67,32 +67,26 @@ class VeriFlame(threading.Thread, object):
 		input_pins = [_PIN_AUTO, _PIN_LOW, _PIN_HIGH]
 		output_pins = [_PIN_RELIGHT, _PIN_OUTPUT]
 
-		self.state = 0
 		for index, pin in enumerate(input_pins):
 			self.GPIO.setup(pin, self.GPIO.IN, pull_up_down=self.GPIO.PUD_DOWN)
 			self.GPIO.add_event_detect(pin, self.GPIO.BOTH, callback=pin_callback, bouncetime=self.bouncetime)
 
-			if self.GPIO.input(pin) == self.GPIO.HIGH:
-				self.state = self.state | (1 << index)
-
-		for pin in output_pins:
+		for index, pin in enumerate(output_pins):
 			self.GPIO.setup(pin, self.GPIO.OUT)
 			self.GPIO.output(pin, False)
 
+		# Force a callback on the iteration through the loop
+		self.event_pin_update.set()
 		while not self.event_shutdown.is_set():
 			self.event_pin_update.wait(1.0)
 			self.event_pin_update.clear()
 
-			current = 0
-			for index, pin in enumerate(input_pins):
-				if self.GPIO.input(pin) == self.GPIO.HIGH:
-					current = current | (1 << index)
-
-			if self.state != current:
-				self.state = current
+			current = self._read_state(input_pins)
+			if self._state != current:
+				self._state = current
 
 				if self.callback:
-					self.callback(self.state)
+					self.callback(self._state)
 
 		self.GPIO.cleanup()
 
