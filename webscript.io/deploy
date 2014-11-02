@@ -1,0 +1,7 @@
+{
+	'/v2/callees': 'callees.lua',
+	'/v2/heartbeat': 'heartbeat.lua',
+	'/v2/message': 'message.lua',
+	'/v2/monitor': 'monitor.lua',
+	'/v2/twilio': 'twilio.lua',
+}
