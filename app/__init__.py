@@ -57,8 +57,9 @@ class App(object):
 			(r'/css/(.*\.css)', web.StaticFileHandler, {'path': resources_dir('css')}),
 			(r'/images/(.*)', web.StaticFileHandler, {'path': resources_dir('images')}),
 
-			(r'/api/events/', api.EventsHandler, {'database': database}),
-		], debug = args.debug)
+			(r'/api/events/', api.EventsHandler, {'database': database, 'queenbee': self.qb}),
+			(r'/api/callees/(?P<callee_id>\+1\d{10})?/?', api.CalleesHandler, {'database': database, 'queenbee': self.qb}),
+		], debug=args.debug)
 
 		self.server = httpserver.HTTPServer(self.application)
 		self.server.listen(args.port, address=args.interface)
