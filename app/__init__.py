@@ -136,7 +136,7 @@ class App(object):
 			self.twilio.messages.create(to=callee, from_=self.twilio_from, body=message)
 
 	def _call(self, callees):
-		callback = self.qb.conference_url
+		callback = self.qb.twilio_endpoint(conference='queenbee')
 		for callee in callees:
 			try:
 				self.twilio.calls.create(to=callee, from_=self.twilio_from, url=callback)

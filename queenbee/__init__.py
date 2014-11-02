@@ -19,24 +19,27 @@ class QueenBee(object):
 	def __signature(self, request):
 		return hmac.new(self.__api_secret, request, digestmod=hashlib.sha256).hexdigest().lower()
 
-	def __conference_url(self):
-		return "https://queenbee.webscript.io/v2/twilio?conference=1"
-	conference_url = property(__conference_url)
-
-	def api_call(self, method, request, query={}, body=None):
+	def _make_request(self, request, **query):
 		if not request.startswith('/'):
 			request = '/' + request
 
+		if query:
+			request = request + '?' + '&'.join(['{0:s}={1:s}'.format(*map(escape.url_escape, map(str, param))) for param in query.items()])
+
+		return 'https://queenbee.webscript.io', request
+
+	def twilio_endpoint(self, conference=None, voice='woman', message='Test'):
+		endpoint, request = self._make_request('/v2/twilio', **kwargs)
+		return endpoint + request
+
+	def api_call(self, method, request, query={}, body=None):
 		request_params = {
 			'method': method
 		}
-
 		query['nonce'] = self.__nonce()
-		if query:
-			params = '&'.join(['{0:s}={1:s}'.format(*map(escape.url_escape, map(str, param))) for param in query.items()])
-			request = request + '?' + params
 
-		url = "https://queenbee.webscript.io" + request
+		endpoint, request = self._make_request(request, **query)
+		url = endpoint + request
 
 		if not body is None:
 			request_params['body'] = json.dumps(body)
