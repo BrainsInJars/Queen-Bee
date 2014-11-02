@@ -5,6 +5,30 @@ var QueenBee = (function (Q, $, undefined) {
 		_.list = function () {
 			return $.ajax('/api/callees/', {type: "GET"});
 		};
+		_.get = function (callee_id) {
+			return $.ajax('/api/callees/' + encodeURI(callee_id) + '/', {type: "GET"});
+		};
+		_.create = function (params) {
+			return $.ajax('/api/callees/',
+				{
+					type: "POST",
+					dataType: "json",
+					data: JSON.stringify(params),
+					contentType: "application/json; charset=utf-8"
+				});
+		};
+		_.update = function (callee_id, params) {
+			return $.ajax('/api/callees/' + encodeURI(callee_id) + '/',
+				{
+					type: "POST",
+					dataType: "json",
+					data: JSON.stringify(params),
+					contentType: "application/json; charset=utf-8"
+				});
+		};
+		_.delete = function (callee_id) {
+			return $.ajax('/api/callees/' + encodeURI(callee_id) + '/', {type: "DELETE"});
+		}
 
 		return _;
 	})(Q.calless || {});
