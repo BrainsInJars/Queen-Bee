@@ -111,6 +111,7 @@ class App(object):
 					if self.notify_on_recovery:
 						self.qb.message = self._get_message(self.state)
 						self._call(self._get_callees())
+					self.notify_on_recovery = False
 					self._log_event('network', 1)
 
 				self.network = 0
@@ -135,10 +136,11 @@ class App(object):
 
 	def _call(self, callees):
 		callback = self.qb.conference_url
-
-		self.log.info('Outbound callback: %s' % callback)
 		for callee in callees:
-			self.twilio.calls.create(to=callee, from_=self.twilio_from, url=callback)
+			try:
+				self.twilio.calls.create(to=callee, from_=self.twilio_from, url=callback)
+			except Exception as ex:
+				pass
 
 	def _get_message(self, state):
 		return {
@@ -169,18 +171,19 @@ class App(object):
 			self.qb.message = self.message
 
 		if self.state == veriflame.AUTO:
-			if state != veriflame.OFF:
+			if state == veriflame.OFF:
+				self._sms(self._get_callees(), self.message)
+			else:
 				# Attempt a relight
 				self._log_event('relight', 1)
 				self.veriflame.relight(2.0)
 				self._log_event('relight', 0)
 
-				if self.network == 1:
-					self._sms(self._get_callees(), self.message)
-				elif self.network == 2:
-					self.notify_on_recovery = True
-				else:
+				try:
 					self._call(self._get_callees())
+				except Exception as ex:
+					self.log.exception(ex)
+					self.notify_on_recovery = True
 
 		elif state == veriflame.AUTO:
 			self.notify_on_recovery = False
