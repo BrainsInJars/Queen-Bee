@@ -1,0 +1,7 @@
+{
+    "/v2/callees": "webscript.io/callees.lua",
+    "/v2/heartbeat": "webscript.io/heartbeat.lua",
+    "/v2/message": "webscript.io/message.lua",
+    "/v2/monitor": "webscript.io/monitor.lua",
+    "/v2/twilio": "webscript.io/twilio.lua"
+}
