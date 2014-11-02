@@ -26,6 +26,7 @@
 		</nav>
 
 		<div class="container-fluid">
+			<div class="alert alert-danger hidden" role="alert" id="alert-no-one-oncall">There is currently no one on call!</div>
 			<div class="row">
 				<div class="col-md-6">
 					<div class="panel panel-default">
@@ -33,21 +34,29 @@
 							On Call
 						</div>
 						<div class="panel-body">
-							<form role="form" id="create-callee">
+							<form class="form-inline" role="form" id="create-callee">
 								<div class="form-group">
   									<input type="text" class="form-control" name="name" placeholder="Name"></input>
   								</div>
   								<div class="form-group">
-  									<input type="tel" class="form-control" name="phone" placeholder="Phone Number"></input>
+  									<div class="input-group">
+	  									<div class="input-group-addon">#</div>
+	  									<input type="tel" class="form-control" name="phone" placeholder="Phone Number"></input>
+	  								</div>
+  								</div>
+  								<div class="form-group">
+  									<button type="button" class="btn btn-primary" id="add-callee" disabled>Add</button>
   								</div>
   							</form>
 						</div>
-						<table class="table">
+						<table class="table" id="callees-table">
 							<thead>
+								<th></th>
 								<th>Name</th>
 								<th>Phone</th>
 								<th>On Call</th>
 							</thead>
+							<tbody></tbody>
 						</table>
 					</div>
 				</div>
