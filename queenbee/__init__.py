@@ -3,6 +3,7 @@ import hashlib
 import time
 import urllib2
 import json
+import logging
 
 from tornado import escape, httpclient
 
@@ -12,6 +13,7 @@ class QueenBee(object):
 		self.__api_secret = api_secret
 
 		self.httpclient = httpclient.HTTPClient()
+		self.log = logging.getLogger('queenbee')
 
 	def __nonce(self):
 		return int(time.time() * 1000)
@@ -31,7 +33,9 @@ class QueenBee(object):
 			key = escape.url_escape(str(key))
 			value = escape.url_escape(str(value))
 
-			return '{0:s}={1:s}' % (key, value)
+			self.log.info((key, value))
+
+			return '%s=%s' % (key, value)
 
 		if query:
 			request = request + '?' + '&'.join(filter(lambda p: not p is None, map(params, query.items())))
