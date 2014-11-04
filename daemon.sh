@@ -17,7 +17,7 @@
 #    . /path_to_virtualenv/activate
 
 DAEMON=/root/Queen-Bee
-PARAMS=--config /root/queenbee.conf
+PARAMS=
 
 case "$1" in
   start)

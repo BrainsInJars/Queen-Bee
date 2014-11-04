@@ -65,7 +65,7 @@ try:
 	if args.debug:
 		app.run()
 	else:
-		runner = daemon.runner.DaemonRunner()
+		runner = daemon.runner.DaemonRunner(app)
 		runner.daemon_context.files_preserve=[handler.stream]
 		runner.do_action()
 except Exception as ex:
