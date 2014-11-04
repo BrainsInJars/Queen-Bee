@@ -42,6 +42,8 @@ class App(object):
 		self.network = 0
 		self.notify_on_recovery = False
 
+		self.relight_hold = self.config.getfloat('QueenBee', 'relight_hold')
+
 		# Configure communication with the VeriFlame
 		bounce_timeout = self.config.getint('VeriFlame', 'bounce_timeout')
 		self.veriflame = veriflame.VeriFlame(bouncetime=bounce_timeout)
@@ -139,7 +141,7 @@ class App(object):
 		callback = self.qb.twilio_endpoint(conference='queenbee')
 		for callee in callees:
 			try:
-				self.twilio.calls.create(to=callee, from_=self.twilio_from, url=callback)
+				self.twilio.calls.create(to=callee, from_=self.twilio_from, url=callback, if_machine='Hangup')
 			except Exception as ex:
 				pass
 
