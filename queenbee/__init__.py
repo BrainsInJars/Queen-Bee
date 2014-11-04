@@ -34,7 +34,7 @@ class QueenBee(object):
 			return '{0:s}={1:s}' % (key, value)
 
 		if query:
-			request = request + '?' + '&'.join(filter(lambda p: not p is None, map(params, query.items()))
+			request = request + '?' + '&'.join(filter(lambda p: not p is None, map(params, query.items())))
 
 		return 'https://queenbee.webscript.io', request
 
