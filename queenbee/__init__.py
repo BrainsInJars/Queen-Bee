@@ -23,13 +23,23 @@ class QueenBee(object):
 		if not request.startswith('/'):
 			request = '/' + request
 
+		def params(param):
+			key, value = param
+			if value is None:
+				continue
+
+			key = escape.url_escape(str(key))
+			value = escape.url_escape(str(value))
+
+			return '{0:s}={1:s}' % (key, value)
+
 		if query:
-			request = request + '?' + '&'.join(['{0:s}={1:s}'.format(*map(escape.url_escape, map(str, param))) for param in query.items()])
+			request = request + '?' + '&'.join(map(params, query.items()))
 
 		return 'https://queenbee.webscript.io', request
 
-	def twilio_endpoint(self, conference=None, voice='woman', message='Test'):
-		endpoint, request = self._make_request('/v2/twilio', **kwargs)
+	def twilio_endpoint(self, conference=None, voice='woman', message=None):
+		endpoint, request = self._make_request('/v2/twilio', conference=conference, voice=voice, message=message)
 		return endpoint + request
 
 	def api_call(self, method, request, query={}, body=None):
