@@ -26,7 +26,7 @@ class QueenBee(object):
 		def params(param):
 			key, value = param
 			if value is None:
-				continue
+				return
 
 			key = escape.url_escape(str(key))
 			value = escape.url_escape(str(value))
@@ -34,7 +34,7 @@ class QueenBee(object):
 			return '{0:s}={1:s}' % (key, value)
 
 		if query:
-			request = request + '?' + '&'.join(map(params, query.items()))
+			request = request + '?' + '&'.join(filter(lambda p: not p is None, map(params, query.items()))
 
 		return 'https://queenbee.webscript.io', request
 
